@@ -114,3 +114,5 @@ You can also click this button:
 [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/netlify/victor-hugo)
 
 ## Enjoy!! 😸
+
+[![Netlify Status](https://api.netlify.com/api/v1/badges/4db1d944-1c50-404b-8c2b-cfbbb5154c94/deploy-status)](https://app.netlify.com/sites/endernac/deploys)
