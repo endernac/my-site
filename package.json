@@ -6,7 +6,7 @@
   "scripts": {
     "test": "karma",
     "build": "npm run build:webpack",
-    "build:webpack": "cross-env NODE_ENV=production webpack --config webpack.prod.js"
+    "build:webpack": "webpack"
   },
   "repository": {
     "type": "git",
