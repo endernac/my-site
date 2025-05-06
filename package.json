@@ -4,8 +4,8 @@
   "description": "Andrew's Personal Website",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"No tests specified\" && exit 0",
-    "build": "echo \"Nothing to build\""
+    "test": "karma",
+    "build": "npm run build:webpack"
   },
   "repository": {
     "type": "git",
