@@ -1,30 +1,26 @@
 {
-  "name": "my-site",
+  "name": "victor-hugo",
   "version": "1.0.0",
-  "description": "Andrew's Personal Website",
+  "description": "Victor Hugo is a Hugo boilerplate for creating truly epic websites!",
+  "repository": "netlify/victor-hugo",
   "main": "index.js",
   "scripts": {
     "lint": "eslint src",
     "start": "run-p start:**",
+    "start:hugo": "hugo -d ../dist -s site -vw",
     "start:webpack": "webpack-dev-server --config webpack.dev.js",
     "preview": "run-p preview:**",
+    "preview:hugo": "npm run start:hugo -- -D -F",
     "preview:webpack": "npm run start:webpack",
     "prebuild": "rimraf dist",
-    "build": "npm run build:webpack",
-    "build:preview": "npm run build:webpack",
+    "build": "npm run build:webpack && npm run build:hugo",
+    "build:preview": "npm run build:webpack && npm run build:hugo:preview",
+    "build:hugo": "hugo -d ../dist -s site -v",
+    "build:hugo:preview": "npm run build:hugo -- -D -F",
     "build:webpack": "cross-env NODE_ENV=production webpack --config webpack.prod.js --hot --inline"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/endernac/my-site.git"
-  },
-  "keywords": [
-    "Andrew",
-    "Cornelio",
-    "Endernac"
-  ],
-  "author": "Andrew Cornelio",
-  "license": "ISC",
+  "author": "",
+  "license": "MIT",
   "devDependencies": {
     "@babel/core": "^7.1.2",
     "@babel/plugin-proposal-object-rest-spread": "^7.0.0",
@@ -64,8 +60,7 @@
     "webpack-merge": "^4.1.4",
     "whatwg-fetch": "^3.0.0"
   },
-  "bugs": {
-    "url": "https://github.com/endernac/my-site/issues"
-  },
-  "homepage": "https://github.com/endernac/my-site#readme"
+  "resolutions": {
+    "natives": "1.1.6"
+  }
 }
