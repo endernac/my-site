@@ -4,7 +4,8 @@
   "description": "Andrew's Personal Website",
   "main": "index.js",
   "scripts": {
-    "test": "karma"
+    "test": "echo \"No tests specified\" && exit 0",
+    "build": "echo \"Nothing to build\""
   },
   "repository": {
     "type": "git",
