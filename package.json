@@ -4,9 +4,19 @@
   "description": "Andrew's Personal Website",
   "main": "index.js",
   "scripts": {
-    "test": "karma",
-    "build": "npm run build:webpack",
-    "build:webpack": "webpack"
+    "lint": "eslint src",
+    "start": "run-p start:**",
+    "start:hugo": "hugo -d ../dist -s site -vw",
+    "start:webpack": "webpack-dev-server --config webpack.dev.js",
+    "preview": "run-p preview:**",
+    "preview:hugo": "npm run start:hugo -- -D -F",
+    "preview:webpack": "npm run start:webpack",
+    "prebuild": "rimraf dist",
+    "build": "npm run build:webpack && npm run build:hugo",
+    "build:preview": "npm run build:webpack && npm run build:hugo:preview",
+    "build:hugo": "hugo -d ../dist -s site -v",
+    "build:hugo:preview": "npm run build:hugo -- -D -F",
+    "build:webpack": "cross-env NODE_ENV=production webpack --config webpack.prod.js --hot --inline"
   },
   "repository": {
     "type": "git",
@@ -22,5 +32,8 @@
   "bugs": {
     "url": "https://github.com/endernac/my-site/issues"
   },
-  "homepage": "https://github.com/endernac/my-site#readme"
+  "homepage": "https://github.com/endernac/my-site#readme",
+  "devDependencies": {
+    "webpack": "^5.99.8"
+  }
 }
