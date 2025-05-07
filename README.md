@@ -7,9 +7,8 @@ Example application using ONNX Runtime Web & Progressive Web Application (PWA) p
 0) Clone this repo
 1) Install Node Version Manager from this [link](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating)
 1) Install node package manager ```nvm install --lts```
-2) Install http-server using npm: ```npm install http-server -g```
-3) Create ssh keys. On command line run: ```openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem```
-3) Run server with ssh keys. On command line run: ```http-server -S -C cert.pem -o```
+2) Install netlify-cli using npm: ```npm install -g netlify-cli@v20.1.1```
+3) Run local dev server. On command line change directory to ```onnx-pwa-demo/``` and run: ```netlify dev```
 
 
 ## Usage (Original)

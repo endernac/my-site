@@ -1,2 +1,0 @@
-# Redirect default Netlify subdomain to primary domain
-https://endernac.netlify.com/* https://www.endernac.com/:splat 301!
