@@ -112,25 +112,56 @@ const MODELS = [
             // Convert tensor to uint8 array for JPEG encoding
             const uint8Array = new Uint8Array(outputTensor.dataSync().map(value => Math.round(value)));
 
-            // // Reshape the uint8 array to match the tensor's shape
-            // const reshapedTensor = tf.tensor(uint8Array, outputTensor.shape, 'int32');
+            // // // Reshape the uint8 array to match the tensor's shape
+            // // const reshapedTensor = tf.tensor(uint8Array, outputTensor.shape, 'int32');
 
-            // // Use tf.node.encodeJpeg to encode the tensor as a JPEG image
-            // const jpegData = tf.node.encodeJpeg(reshapedTensor);
+            // // // Use tf.node.encodeJpeg to encode the tensor as a JPEG image
+            // // const jpegData = tf.node.encodeJpeg(reshapedTensor);
 
-            // Create a blob from the data of type application/octet-stream
+            // // Create a blob from the data of type application/octet-stream
 
-            const outputBlob = new Blob([uint8Array], { type: 'application/octet-stream' });
+            // const outputBlob = new Blob([uint8Array], { type: 'image/png ' });
 
-            // Generate a URL for the blob
-            const url = URL.createObjectURL(outputBlob);
+            // // Generate a URL for the blob
+            // const url = URL.createObjectURL(outputBlob);
 
-            // Convert the url to a string
-            const urlString = url.toString();
+            // // Convert the url to a string
+            // const urlString = url.toString();
 
-            // Model returns a tensor, but we need to return a number
-            // TODO: change the index.js to handle a tensor
-            return { raw: 5.555555555, softmaxed: 5.555555555, label: urlString };
+            // // Model returns a tensor, but we need to return a number
+            // // TODO: change the index.js to handle a tensor
+            // return { raw: 5.555555555, softmaxed: 5.555555555, label: urlString };
+
+            // Create a canvas element
+            const canvas = document.createElement('canvas');
+            canvas.width = outputTensor.shape[1]; // Width
+            canvas.height = outputTensor.shape[0]; // Height
+            const ctx = canvas.getContext('2d');
+
+            // Create an ImageData object and put it on the canvas
+            const imageData = ctx.createImageData(canvas.width, canvas.height);
+            for (let i = 0; i < uint8Array.length; i++) {
+                const pixelIndex = i * 4;
+                imageData.data[pixelIndex] = uint8Array[i]; // Red
+                imageData.data[pixelIndex + 1] = uint8Array[i]; // Green
+                imageData.data[pixelIndex + 2] = uint8Array[i]; // Blue
+                imageData.data[pixelIndex + 3] = 255; // Alpha (fully opaque)
+            }
+            ctx.putImageData(imageData, 0, 0);
+
+            // Convert the canvas to a Blob
+            return new Promise((resolve) => {
+                canvas.toBlob((outputBlob) => {
+                    // Generate a URL for the blob
+                    const url = URL.createObjectURL(outputBlob);
+
+                    // Convert the URL to a string
+                    const urlString = url.toString();
+
+                    // Return the result
+                    resolve({ raw: 5.555555555, softmaxed: 5.555555555, label: urlString });
+                }, 'image/png');
+            });
         }
     })
 ]
