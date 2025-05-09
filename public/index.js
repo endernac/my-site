@@ -133,7 +133,7 @@ document.querySelector('#runButton').addEventListener('click', async function() 
         let tr = tbody.insertRow();
         tr.innerHTML = `
             <td>${file.webkitRelativePath ? file.webkitRelativePath : file.name}</td>
-            <td><a href=${runData.output.label}>Download</a></td>
+            <td><a href=${runData.output.label}>Image</a></td>
             <td>${runData.inferenceTimeMs.toFixed(0)}</td>
         `;
 
