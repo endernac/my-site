@@ -240,3 +240,5 @@ function makeModalElement(modalContentHTML) {
     document.body.appendChild(modalElement);
     return modalElement;
 }
+
+module.exports = { downloadFileWithChunking };

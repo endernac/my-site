@@ -1,7 +1,19 @@
 {
-    "name": "netlify-example-hello-functions",
-    "version": "1.0.0",
-    "description": "A site to show a hello world example of using Netlify Functions",
-    "author": "Netlify",
-    "license": "ISC"
+  "name": "onnx-pwa-demo",
+  "version": "1.0.0",
+  "description": "A simple PWA demo using ONNX.js",
+  "author": "Andrew Cornelio",
+  "license": "ISC",
+  "devDependencies": {
+    "@tensorflow/tfjs-node": "^4.22.0",
+    "onnxruntime-web": "^1.21.0",
+    "playwright": "^1.52.0"
+  },
+  "scripts": {
+    "test": "playwright test",
+    "setup": "npm install -g netlify-cli@v20.1.1 && npm install"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.52.0"
+  }
 }

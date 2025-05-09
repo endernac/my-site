@@ -3,12 +3,18 @@
 Example application using ONNX Runtime Web & Progressive Web Application (PWA) principles to deploy an image classifier CNN in-browser, on client devices, with offline functionality.
 
 
-## For JHU RAIL Useage (Running locally)
-0) Clone this repo
+## For JHU RAIL Usage (Running locally)
+0) Clone this repo, and on the command line, change directory to `onnx-pwa-demo/`
 1) Install Node Version Manager from this [link](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating)
-1) Install node package manager ```nvm install --lts```
-2) Install netlify-cli using npm: ```npm install -g netlify-cli@v20.1.1```
-3) Run local dev server. On command line change directory to ```onnx-pwa-demo/``` and run: ```netlify dev```
+2) Install node package manager: `nvm install --lts`
+3) Run the setup script: `npm run setup`
+4) Run tests to verify installation: `npm test`
+5) Run the local dev server: `netlify dev`
+
+
+TODO:
+- [ ] Create a new function `naive_resize()` in utils.js to return a greyscale resized image w/o superresolution
+- [ ] modify index.js to create a side by side comparison of `naive_resize()` and the output of the superresolution model
 
 
 ## Usage (Original)

@@ -106,7 +106,7 @@ document.querySelector('#runButton').addEventListener('click', async function() 
     // Table to display outputs
     const table = document.querySelector("#multiOutputContainer table");
     // Set up table header
-    const columns = ["filename", "quality", "raw", "inferenceTimeMs"];
+    const columns = ["filename", "Output", "inferenceTimeMs"];
     let thead = document.createElement("thead");
     thead.classList.add("table-light");
     thead.innerHTML = `<tr>${columns.map(col => `<th>${col}</th>`).join("")}</tr>`;
@@ -133,10 +133,10 @@ document.querySelector('#runButton').addEventListener('click', async function() 
         let tr = tbody.insertRow();
         tr.innerHTML = `
             <td>${file.webkitRelativePath ? file.webkitRelativePath : file.name}</td>
-            <td>${runData.output.label}</td>
-            <td>${runData.output.raw.toFixed(8)}</td>
+            <td><a href=${runData.output.label}>Download</a></td>
             <td>${runData.inferenceTimeMs.toFixed(0)}</td>
         `;
+
         // Conditional styling, poor quality is highlighted as red
         if (runData.output.label.toUpperCase() === "POOR") {
             tr.classList.add("table-danger");
@@ -148,6 +148,9 @@ document.querySelector('#runButton').addEventListener('click', async function() 
 
     // Display table
     document.querySelector("#multiOutputContainer").classList.remove("d-none");
+
+    // Display image comparison container
+    // document.querySelector("#imageComparisonContainer").classList.remove("d-none");
 });
 
 function clearOutputs() {
