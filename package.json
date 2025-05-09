@@ -1,5 +1,5 @@
 {
-  "name": "onnx-pwa-demo",
+  "name": "Image Super Resolution Demo",
   "version": "1.0.0",
   "description": "A simple PWA demo using ONNX.js",
   "author": "Andrew Cornelio",
