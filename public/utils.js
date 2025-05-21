@@ -105,6 +105,21 @@ async function saveTensorToJSON(tensor) {
     URL.revokeObjectURL(url);
 }
 
+async function saveTensorBinary(tensor, fileName = 'tensorData.bin') {
+    const flat = await tensor.data();             // Promise<Float32Array>
+    const buffer = flat.buffer;                   // ArrayBuffer
+    const blob = new Blob([buffer], {             // binary blob
+      type: 'application/octet-stream'
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  
+
 /**
  * Helper function for visualizing a TensorFlow tensor by converting it into a
  * dataURL and then setting the src of the passed img element. Scales pixel
@@ -155,6 +170,7 @@ function imageFileToTensor(file) {
                     const height = jsonData.length;
                     const width = jsonData[0].length;
                     const reshapedTensor = tensor.reshape([height, width, 3]);
+                    // const reshapedTensor = tensor.reshape([245, 1024, 245]);
 
                     // Print the tensor or use it for further processing
                     reshapedTensor.print();  // This will print the tensor to the console
@@ -179,6 +195,54 @@ function imageFileToTensor(file) {
             };
             reader.readAsDataURL(file);
         }
+    });
+}
+
+/**
+ * Converts a .img file into a TensorFlow.js tensor.
+ * @param {File} file - The .img file to be converted.
+ * @param {Array<number>} volDim - The dimensions of the volume (e.g., [245, 1024, 245]).
+ * @returns {Promise<tf.tensor>} A tf.tensor with the reshaped data.
+ */
+async function imgFileToTensor(file, volDim) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = function (event) {
+            try {
+                // Read the file as an ArrayBuffer
+                const arrayBuffer = event.target.result;
+
+                // Convert the ArrayBuffer to a Uint8Array
+                const uint8Array = new Uint8Array(arrayBuffer);
+
+                // Check if the size matches the expected volume dimensions
+                const expectedSize = volDim.reduce((a, b) => a * b, 1);
+                if (uint8Array.length !== expectedSize) {
+                    throw new Error(
+                        `File size (${uint8Array.length}) does not match expected dimensions (${volDim.join('x')}).`
+                    );
+                }
+
+                // Convert the Uint8Array to a uint8Array
+                const arr = new Uint8Array(arrayBuffer);
+
+                // // Create a uint8 TensorFlow.js tensor and reshape it
+                const tensor = tf.tensor(arr, volDim);
+
+                resolve(tensor);
+                // resolve(arr);
+            } catch (error) {
+                reject(error);
+            }
+        };
+
+        reader.onerror = function (error) {
+            reject(error);
+        };
+
+        // Read the file as an ArrayBuffer
+        reader.readAsArrayBuffer(file);
     });
 }
 
@@ -241,4 +305,304 @@ function makeModalElement(modalContentHTML) {
     return modalElement;
 }
 
-module.exports = { downloadFileWithChunking };
+
+/**
+ * Normalize using percentile-based rescaling
+ * @param {tensor} vol - Tensor to be normalized
+ * @returns {tensor} Normalized tensor
+ */
+const normalize = (vol, lowerPercentile, upperPercentile) => {
+    // check that the tensor is of int32 type
+    if (vol.dtype !== 'int32') {
+        throw new Error("Tensor must be of dtype 'int32'");
+    }
+    // check that the tensor is 3D
+    if (vol.rank !== 3) {
+        throw new Error("Input tensor must be 3D");
+    }
+
+    // create a volume normalized to the range [-1, 1]
+    const normalized = vol.clipByValue(lowerPercentile, upperPercentile)
+        .sub(lowerPercentile)
+        .div(upperPercentile - lowerPercentile)
+        .mul(2)
+        .sub(1);
+    
+    // convert tensor to float32 and return
+    return normalized.cast('float32');
+};
+
+/**
+ * Normalize using percentile-based rescaling
+ * @param {tensor} vol - Tensor to be normalized
+ * @returns {tensor} Normalized tensor
+ */
+const normalize2 = (vol) => {
+    // check that the tensor is of float32 type
+    if (vol.dtype !== 'float32') {
+        throw new Error("Tensor must be of dtype 'float32'");
+    }
+    // check that the tensor is 3D
+    if (vol.rank !== 3) {
+        throw new Error("Input tensor must be 3D");
+    }
+
+    const flatten = vol.flatten();
+    const sorted = flatten.arraySync().sort((a, b) => a - b);
+    const lowerPercentile = sorted[Math.floor(0.005 * sorted.length)];
+    const upperPercentile = sorted[Math.floor(0.995 * sorted.length)];
+
+    return vol.clipByValue(lowerPercentile, upperPercentile)
+        .sub(lowerPercentile)
+        .div(upperPercentile - lowerPercentile)
+        .mul(2)
+        .sub(1);
+};
+
+// /**
+//  * Normalize a Uint8Array using percentile-based rescaling
+//  * @param {Uint8Array} vol - 3D volume data
+//  * @param {number} lowerPercentile - Lower percentile threshold (0-255)
+//  * @param {number} upperPercentile - Upper percentile threshold (0-255)
+//  * @returns {Float32Array} Normalized Float32 volume in range [-1, 1]
+//  */
+// function normalize(vol, lowerPercentile, upperPercentile) {
+//     if (!(vol instanceof Uint8Array)) {
+//         throw new Error("Input must be a Uint8Array");
+//     }
+
+//     if (lowerPercentile >= upperPercentile) {
+//         throw new Error("Lower percentile must be less than upper percentile");
+//     }
+
+//     const range = upperPercentile - lowerPercentile;
+//     const normalized = new Float32Array(vol.length);
+
+//     for (let i = 0; i < vol.length; i++) {
+//         // Clip to percentile range
+//         let val = vol[i];
+//         if (val < lowerPercentile) val = lowerPercentile;
+//         if (val > upperPercentile) val = upperPercentile;
+
+//         // Normalize to [0, 1]
+//         let norm = (val - lowerPercentile) / range;
+
+//         // Scale to [-1, 1]
+//         norm = norm * 2 - 1;
+
+//         normalized[i] = norm;
+//     }
+
+//     return normalized;
+// }
+
+// /**
+//  * Normalize a Float32Array using percentile-based rescaling
+//  * @param {Float32Array} vol - Flat 3D volume data
+//  * @param {number} lowerPercentile - Lower percentile threshold (0-255)
+//  * @param {number} upperPercentile - Upper percentile threshold (0-255)
+//  * @returns {Float32Array} Normalized Float32 volume in range [-1, 1]
+//  */
+// function normalize(vol, lowerPercentile, upperPercentile) {
+//     if (!(vol instanceof Float32Array)) {
+//         throw new Error("Input must be a Float32Array");
+//     }
+
+//     if (lowerPercentile >= upperPercentile) {
+//         throw new Error("Lower percentile must be less than upper percentile");
+//     }
+
+//     const range = upperPercentile - lowerPercentile;
+//     const normalized = new Float32Array(vol.length);
+
+//     for (let i = 0; i < vol.length; i++) {
+//         // Clip to percentile range
+//         let val = vol[i];
+//         if (val < lowerPercentile) val = lowerPercentile;
+//         if (val > upperPercentile) val = upperPercentile;
+
+//         // Normalize to [0, 1]
+//         let norm = (val - lowerPercentile) / range;
+
+//         // Scale to [-1, 1]
+//         norm = norm * 2 - 1;
+
+//         normalized[i] = norm;
+//     }
+
+//     return normalized;
+// }
+
+/**
+ * Compute percentiles from a 3D tf.Tensor of uint8 values.
+ *
+ * @param {tf.Tensor3D} vol - A 3D Tensor of dtype 'uint8' or 'int32'.
+ * @param {number} pLow        - Lower percentile (e.g. 0.005).
+ * @param {number} pHigh       - Upper percentile (e.g. 0.995).
+ * @returns {{ low: number, high: number }} - Percentile gray-levels.
+ */
+function computeUint8PercentilesTensor(vol, pLow = 0.005, pHigh = 0.995) {
+    // check that the tensor is of int32 type
+    if (vol.dtype !== 'int32') {
+        throw new Error("Tensor must be of dtype 'int32'");
+    }
+    if (vol.rank !== 3) {
+        throw new Error("Input tensor must be 3D");
+    }
+  
+    const hist = new BigUint64Array(256);
+    const data = vol.dataSync(); // Uint8Array or Int32Array (no copy for uint8)
+    const total = data.length;
+  
+    // 1) Histogram
+    for (let i = 0; i < total; i++) {
+        const val = data[i];
+        hist[val]++;
+    }
+  
+    // 2) Cumulative histogram
+    const cdf = new BigUint64Array(256);
+    let cumulative = BigInt(0);
+    for (let v = 0; v < 256; v++) {
+        cumulative += hist[v];
+        cdf[v] = cumulative;
+    }
+  
+    // 3) Targets
+    const targetLow  = Math.floor(pLow  * total);
+    const targetHigh = Math.floor(pHigh * total);
+  
+    // 4) Percentile values
+    let low = 0, high = 255;
+    for (let v = 0; v < 256; v++) {
+        if (cdf[v] >= targetLow) {
+            low = v;
+            break;
+        }
+    }
+    for (let v = 0; v < 256; v++) {
+        if (cdf[v] >= targetHigh) {
+            high = v;
+            break;
+        }
+    }
+  
+    return { low, high };
+};
+
+/**
+ * Crop the volume to the region of interest
+ * @param {tensor} vol - Tensor to be cropped
+ * @returns {tensor} Cropped tensor
+ */
+const crop_volume = async (vol, tol = 0.75) => {
+    // check that the tensor is of int32 type
+    if (vol.dtype !== 'int32' && vol.dtype !== 'float32') {
+        throw new Error("Tensor must be of dtype 'int32' or 'float32'");
+    }
+    if (vol.rank !== 3) {
+        throw new Error("Input tensor must be 3D");
+    }
+
+    // get the mask of voxel above the threshold
+    const mask = vol.greater(tf.scalar(tol));
+
+    // get the coordinates of the non-zero elements using tensorflow.js
+    const coords = await tf.whereAsync(mask);
+
+    if (coords.size === 0) {
+        throw new Error('No valid region found in the tensor for cropping.');
+    }
+
+    // get x, y, z dimensions
+    const [x_max, y_max, z_max] = vol.shape; 
+    const [x0, y0, z0] = coords.min(0).arraySync();
+    const [x1, y1, z1] = coords.max(0).arraySync().map((v) => v + 1);
+
+    // fix to make syntax correct
+    return vol.slice([x0, y0, z0], [x1 - x0, y1 - y0, z1 - z0]); 
+};
+
+/**
+ * 3D trilinear interpolation of a tf.Tensor3D, align_corners=false.
+ *
+ * @param {tf.Tensor3D} vol    Input volume tensor of shape [D_in, H_in, W_in]
+ * @param {[number,number,number]} size  Desired output shape [D_out, H_out, W_out]
+ * @returns {tf.Tensor3D}       Interpolated tensor [D_out, H_out, W_out]
+ */
+function resize(vol, size) {
+    if (vol.dtype !== 'float32') {
+        throw new Error("Tensor must be of dtype 'float32'");
+    }
+    if (vol.rank !== 3) {
+        throw new Error("Input tensor must be 3D");
+    }
+    
+    // 1. Read input shape and flat data
+    const [D_in, H_in, W_in] = vol.shape;                         // tf.Tensor3D.shape :contentReference[oaicite:3]{index=3}
+    const inputData = vol.dataSync();                             // Float32Array length D_in*H_in*W_in :contentReference[oaicite:4]{index=4}
+
+    // 2. Prepare output dims and buffer
+    const [D_out, H_out, W_out] = size;
+    const outData = new Float32Array(D_out * H_out * W_out);
+
+    // 3. Compute scales (align_corners=false): old_dim / new_dim
+    const scaleD = D_in / D_out;
+    const scaleH = H_in / H_out;
+    const scaleW = W_in / W_out;
+
+    // 4. Helper to fetch with edge padding
+    function getVoxel(z, y, x) {
+        if (z < 0)   z = 0;
+        if (y < 0)   y = 0;
+        if (x < 0)   x = 0;
+        if (z >= D_in) z = D_in - 1;
+        if (y >= H_in) y = H_in - 1;
+        if (x >= W_in) x = W_in - 1;
+        return inputData[z * H_in * W_in + y * W_in + x];
+    }
+
+    // 5. Main tricubic loops
+    let outIndex = 0;
+    for (let k = 0; k < D_out; k++) {
+        const z = (k + 0.5) * scaleD - 0.5;  // align_corners=false mapping :contentReference[oaicite:5]{index=5}
+        const z0 = Math.floor(z), z1 = z0 + 1, dz = z - z0;
+
+        for (let j = 0; j < H_out; j++) {
+        const y = (j + 0.5) * scaleH - 0.5;
+        const y0 = Math.floor(y), y1 = y0 + 1, dy = y - y0;
+
+        for (let i = 0; i < W_out; i++, outIndex++) {
+            const x = (i + 0.5) * scaleW - 0.5;
+            const x0 = Math.floor(x), x1 = x0 + 1, dx = x - x0;
+
+            // Corners
+            const c000 = getVoxel(z0, y0, x0);
+            const c100 = getVoxel(z0, y0, x1);
+            const c010 = getVoxel(z0, y1, x0);
+            const c110 = getVoxel(z0, y1, x1);
+            const c001 = getVoxel(z1, y0, x0);
+            const c101 = getVoxel(z1, y0, x1);
+            const c011 = getVoxel(z1, y1, x0);
+            const c111 = getVoxel(z1, y1, x1);
+
+            // Interpolate X
+            const c00 = c000 * (1 - dx) + c100 * dx;
+            const c10 = c010 * (1 - dx) + c110 * dx;
+            const c01 = c001 * (1 - dx) + c101 * dx;
+            const c11 = c011 * (1 - dx) + c111 * dx;
+
+            // Interpolate Y
+            const c0 = c00 * (1 - dy) + c10 * dy;
+            const c1 = c01 * (1 - dy) + c11 * dy;
+
+            // Interpolate Z
+            outData[outIndex] = c0 * (1 - dz) + c1 * dz;
+        }
+        }
+    }
+
+    // 6. Pack and return a new tf.Tensor3D
+    return tf.tensor3d(outData, [D_out, H_out, W_out], 'float32');  // tf.tensor3d :contentReference[oaicite:6]{index=6}
+}
+  

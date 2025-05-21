@@ -3,97 +3,89 @@ const ort = require('onnxruntime-web');
 const tf = require('@tensorflow/tfjs-node');
 const fs = require('fs');
 const path = require('path');
-const { downloadFileWithChunking } = require('./utils.js'); // Import the function
+const { MODELS } = require('./models.js');
+const { saveTensorToJSONNode } = require('./utils.js');
+
+// Get the Super Resolution model from the imported models
+const superResolutionModel = MODELS.find(model => model.name === 'Super Resolution');
 
 // Configuration for ONNX Runtime
 const INFERENCE_SESSION_OPTIONS = {
     executionProviders: ['cpu'], // Use CPU for testing
 };
 
-// Super Resolution Model Configuration
-const superResolutionModel = {
-    name: 'Super Resolution',
-    onnxPath: "https://huggingface.co/endernac/onnx-superres/resolve/main/onnx/super_resolution.onnx",
-    load: async function(progressCallback) {
-        this.ortSession = await ort.InferenceSession.create(await downloadFileWithChunking(this.onnxPath, progressCallback), INFERENCE_SESSION_OPTIONS);
-    },
-    preprocess: async (inputTensor) => {
-        let processedTensor = tf.image.resizeBilinear(inputTensor, [224, 224]);
-
-        if (processedTensor.shape[processedTensor.shape.length - 1] === 3) {
-        processedTensor = tf.image.rgbToGrayscale(processedTensor);
-        }
-
-        processedTensor = processedTensor.div(tf.scalar(255));
-        processedTensor = processedTensor.expandDims(0);
-        processedTensor = processedTensor.transpose([0, 3, 1, 2]); // Convert to [batch, channels, height, width]
-
-        const ortInputs = {
-        'input': new ort.Tensor('float32', new Float32Array(processedTensor.dataSync()), processedTensor.shape),
-        };
-        return ortInputs;
-    },
-    postprocess: function (ortOutputs) {
-        const ortOutputTensor = ortOutputs[this.ortSession.outputNames[0]];
-        const outputData = ortOutputTensor.data;
-
-        let outputTensor = tf.tensor(outputData, ortOutputTensor.dims);
-        outputTensor = outputTensor.squeeze();
-        outputTensor = outputTensor.mul(tf.scalar(255)).clipByValue(0, 255);
-        outputTensor = tf.round(outputTensor); // Round values to integers
-
-        // Ensure the tensor is 3-dimensional (add a channel dimension for grayscale images)
-        if (outputTensor.shape.length === 2) {
-        outputTensor = outputTensor.expandDims(-1); // Add channel dimension
-        }
-
-        const outputShape = `${outputTensor.shape[1]}x${outputTensor.shape[0]}`;
-        return { raw: outputTensor, label: outputShape };
-    },
-};
-
 test.describe('Super Resolution Model', () => {
-    test('should load, preprocess, run inference, and postprocess correctly', async () => {
-        // console.log('Testing Super Resolution Model...');
+    let inputTensor;
+    let ortInputs;
+    let ortOutputs;
+    let result;
 
+    test.beforeAll(async () => {
         // Load the model
         await superResolutionModel.load();
-        // console.log('Model loaded successfully.');
+        console.log('Model loaded successfully.');
 
         // Load a sample image
-        const imagePath = path.resolve(__dirname, './test.jpg'); // Replace with a valid image path
+        const imagePath = path.resolve(__dirname, './test.jpg');
         if (!fs.existsSync(imagePath)) {
-        throw new Error('Sample image not found. Please provide a valid image at ./test.jpg');
+            throw new Error('Sample image not found. Please provide a valid image at ./test.jpg');
         }
         const imageBuffer = fs.readFileSync(imagePath);
-        const inputTensor = tf.node.decodeImage(imageBuffer, 3); // Decode image as RGB tensor
-        // console.log('Sample image loaded.');
+        inputTensor = tf.node.decodeImage(imageBuffer, 3);
+        console.log('Sample image loaded.');
+    });
 
-        // Preprocess the input
-        const ortInputs = await superResolutionModel.preprocess(inputTensor);
-        // console.log('Input preprocessed.');
+    test('should load the model successfully', async () => {
+        expect(superResolutionModel.ortSession).toBeDefined();
+        expect(superResolutionModel.ortSession.outputNames).toBeDefined();
+    });
 
-        // Run inference
-        const ortOutputs = await superResolutionModel.ortSession.run(ortInputs);
-        // console.log('Inference completed.');
+    test('should preprocess the input image correctly', async () => {
+        ortInputs = await superResolutionModel.preprocess(inputTensor);
+        
+        expect(ortInputs).toBeDefined();
+        expect(ortInputs.input).toBeDefined();
+        expect(ortInputs.input.dims).toEqual([1, 1, 224, 224]); // Check expected dimensions
+    });
 
-        // Postprocess the output
-        const result = superResolutionModel.postprocess(ortOutputs);
-        // console.log('Postprocessing completed.');
+    test('should run inference successfully', async () => {
+        ortOutputs = await superResolutionModel.ortSession.run(ortInputs);
+        
+        expect(ortOutputs).toBeDefined();
+        expect(ortOutputs[superResolutionModel.ortSession.outputNames[0]]).toBeDefined();
+    });
 
-        // Validate the results
-        // console.log('Output Label (Resolution):', result.label);
-        // console.log('Output Tensor Shape:', result.raw.shape);
+    test('should postprocess the output correctly', async () => {
+        result = superResolutionModel.postprocess(ortOutputs);
+        
+        expect(result).toBeDefined();
+        // The model should output a tensor with shape [672, 672] for grayscale
+        // We'll expand it to 3D for image saving
+        expect(result.shape.length).toBe(2);
+        expect(result.shape[0]).toBe(672);
+        expect(result.shape[1]).toBe(672);
 
-        // Save the output image
-        const outputImagePath = path.resolve(__dirname, './output.jpg');
-        const outputImageBuffer = await tf.node.encodeJpeg(result.raw); // Await the Promise
-        fs.writeFileSync(outputImagePath, outputImageBuffer);
-        // console.log('Output image saved at:', outputImagePath);
+        // Expand dimensions to make it compatible with image saving
+        result = result.expandDims(-1); // Add channel dimension
+    });
 
-        // Assertions
-        expect(result.label).toMatch(/^\d+x\d+$/); // Ensure the label is in the format "widthxheight"
-        expect(result.raw.shape).toEqual([672, 672, 1]); // Ensure the output tensor has the correct shape
-        expect(fs.existsSync(outputImagePath)).toBeTruthy(); // Ensure the output image was saved
+    // TODO: Should save the output tensor to a file using utils.js
+    test('should save the output tensor to a file using utils.js', async () => {
+        const outputImagePath = path.resolve(__dirname, './output.json');
+        await saveTensorToJSONNode(result, outputImagePath);
+        
+        // Verify the file was created
+        expect(fs.existsSync(outputImagePath)).toBeTruthy();
+        console.log('Output tensor saved at:', outputImagePath);
+    });
+
+    test.afterAll(async () => {
+        // Cleanup
+        if (inputTensor) {
+            inputTensor.dispose();
+        }
+        if (result) {
+            result.dispose();
+        }
     });
 });

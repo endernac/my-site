@@ -1,9 +1,3 @@
-// const ort = require('onnxruntime-web');
-// const tf = require('@tensorflow/tfjs-node');
-// const { downloadFileWithChunking } = require('./utils.js'); // Ensure this is correctly imported
-// const ONNXModel = require('./ONNXModel.js'); // Import the ONNXModel class
-
-
 // Session options for constructing ONNX Runtime Web (ORT) InferenceSession object
 // See https://onnxruntime.ai/docs/api/js/interfaces/InferenceSession.SessionOptions.html
 const INFERENCE_SESSION_OPTIONS = {
@@ -19,149 +13,77 @@ const INFERENCE_SESSION_OPTIONS = {
 }
 
 const MODELS = [
-    // new ONNXModel ({
-    //     name: 'VIT Face Expression Classification',
-    //     onnxPath: "https://huggingface.co/trpakov/vit-face-expression/resolve/main/onnx/model.onnx",
-    //     load: async function(progressCallback) {
-    //         this.ortSession = await ort.InferenceSession.create(await downloadFileWithChunking(this.onnxPath, progressCallback), INFERENCE_SESSION_OPTIONS);
-    //     },
-    //     preprocess: async (inputTensor) => {
-    //         // derived from https://huggingface.co/trpakov/vit-face-expression/blob/main/onnx/preprocessor_config.json
-    //         var processedTensor = inputTensor;
-
-    //         // Resize to 224x224
-    //         processedTensor = tf.image.resizeBilinear(processedTensor, [224, 224]);
-
-    //         // Rescale from [0, 255] to [0.0, 1.0]
-    //         processedTensor = processedTensor.div(tf.scalar(255));
-
-    //         // Normalize: (x - mean) / std
-    //         const mean = tf.tensor([0.5, 0.5, 0.5]);
-    //         const std = tf.tensor([0.5, 0.5, 0.5]);
-    //         processedTensor = processedTensor.sub(mean).div(std);
-
-    //         // Add outer batch size dimension if necessary
-    //         if (processedTensor.shape.length === 3) {
-    //             processedTensor = processedTensor.expandDims(0);
-    //         }
-
-    //         // Default Tensorflow shape is (batch_size * H * W * C)
-    //         // but model uses shape (batch_size * C * H * W)
-    //         processedTensor = processedTensor.transpose([0, 3, 1, 2]);
-
-    //         // Convert tf tensor to ort inputs
-    //         const ortInputs = {
-    //             'pixel_values': new ort.Tensor('float32', new Float32Array(processedTensor.dataSync()), processedTensor.shape)
-    //         };
-    //         return ortInputs;
-    //     },
-    //     postprocess: function(ortOutputs) {
-    //         const ortOutputTensor = ortOutputs[this.ortSession.outputNames[0]];
-    //         const outputRaw = ortOutputTensor.data;
-
-    //         // derived from https://huggingface.co/trpakov/vit-face-expression/blob/main/onnx/config.json
-    //         const id2label = {
-    //             0: "angry",
-    //             1: "disgust",
-    //             2: "fear",
-    //             3: "happy",
-    //             4: "neutral",
-    //             5: "sad",
-    //             6: "surprise"
-    //           };
-
-    //           const logits = tf.tensor(outputRaw);
-    //           const probs = tf.softmax(logits);
-    //           const predictedIndex = probs.argMax().dataSync()[0];
-    //           const predictedLabel = id2label[predictedIndex];
-    //           return { raw: logits.dataSync()[predictedIndex], softmaxed: probs, label: predictedLabel };
-    //     }
-    // }),
     new ONNXModel ({
-        name: 'Super Resolution',
-        onnxPath: "https://huggingface.co/endernac/onnx-superres/resolve/main/onnx/super_resolution.onnx",
+        name: 'zeiss_3x3mm_FlowCube_z_img_245x1024x245_v1',
+        onnxPath: "https://huggingface.co/endernac/octa_gan/resolve/main/zeiss_3x3mm_FlowCube_z_img_245x1024x245_v1.onnx",
         load: async function(progressCallback) {
             this.ortSession = await ort.InferenceSession.create(await downloadFileWithChunking(this.onnxPath, progressCallback), INFERENCE_SESSION_OPTIONS);
         },
         preprocess: async (inputTensor) => {
-            let processedTensor = tf.image.resizeBilinear(inputTensor, [224, 224]);
+            // let vol = inputTensor.reverse(1).toFloat();
+            // // saveTensorBinary(vol, 'original.bin');
 
-            if (processedTensor.shape[processedTensor.shape.length - 1] === 3) {
-            processedTensor = tf.image.rgbToGrayscale(processedTensor);
-            }
+            // console.log('Begin normalization');
+            // vol = normalize2(vol);
+            // // saveTensorBinary(vol, 'normalized.bin');
 
-            processedTensor = processedTensor.div(tf.scalar(255));
-            processedTensor = processedTensor.expandDims(0);
-            processedTensor = processedTensor.transpose([0, 3, 1, 2]); // Convert to [batch, channels, height, width]
+            // console.log('Begin cropping');
+            // vol = await crop_volume(vol, tol=0.75);
+            // // saveTensorBinary(vol, 'cropped.bin');
 
+            // console.log('Begin resizing');
+            // vol = resize(vol, [128, 128, 128]);
+            // // saveTensorBinary(vol, 'resized.bin');
+
+            // console.log('Begin normalization');
+            // vol = normalize2(vol);
+            // // saveTensorBinary(vol, 'normalized2.bin');
+    
+            // vol = vol.reshape([1, 1, 128, 128, 128]);
+
+            let vol = inputTensor.reverse(1);
+            // saveTensorBinary(vol, 'original.bin');
+
+            console.log('Calculate percentiles');
+            const {low, high} = computeUint8PercentilesTensor(vol);
+            // console.log(low, high);
+
+            console.log('Begin cropping');
+            vol = await crop_volume(vol, low + 0.875 * (high - low));
+            // saveTensorBinary(vol, 'cropped.bin');
+
+            console.log('Begin normalization');
+            vol = normalize(vol, low, high);
+            // saveTensorBinary(vol, 'normalized.bin');
+
+            console.log('Begin resizing');
+            vol = resize(vol, [128, 128, 128]);
+            // saveTensorBinary(vol, 'resized.bin');
+
+            console.log('Begin normalization');
+            vol = normalize2(vol);
+            // saveTensorBinary(vol, 'normalized2.bin');
+    
+            // Reshape to match ONNX input shape: [1, 1, 128, 128, 128]
+            vol = vol.reshape([1, 1, 128, 128, 128]);
+
+            console.log('Begin Inference');
+            // Convert to ONNX Runtime input format
             const ortInputs = {
-            'input': new ort.Tensor('float32', new Float32Array(processedTensor.dataSync()), processedTensor.shape),
+                'input': new ort.Tensor('float32', vol.dataSync(), vol.shape),
             };
+    
             return ortInputs;
         },
         postprocess: function (ortOutputs) {
             const ortOutputTensor = ortOutputs[this.ortSession.outputNames[0]];
             const outputData = ortOutputTensor.data;
-
-            // Convert output data to a tensor and process it
-            let outputTensor = tf.tensor(outputData, ortOutputTensor.dims);
-            outputTensor = outputTensor.squeeze();
-            outputTensor = outputTensor.mul(tf.scalar(255)).clipByValue(0, 255);
-            outputTensor = tf.round(outputTensor); // Round values to integers
-
-            // Convert tensor to uint8 array for JPEG encoding
-            const uint8Array = new Uint8Array(outputTensor.dataSync().map(value => Math.round(value)));
-
-            // // // Reshape the uint8 array to match the tensor's shape
-            // // const reshapedTensor = tf.tensor(uint8Array, outputTensor.shape, 'int32');
-
-            // // // Use tf.node.encodeJpeg to encode the tensor as a JPEG image
-            // // const jpegData = tf.node.encodeJpeg(reshapedTensor);
-
-            // // Create a blob from the data of type application/octet-stream
-
-            // const outputBlob = new Blob([uint8Array], { type: 'image/png ' });
-
-            // // Generate a URL for the blob
-            // const url = URL.createObjectURL(outputBlob);
-
-            // // Convert the url to a string
-            // const urlString = url.toString();
-
-            // // Model returns a tensor, but we need to return a number
-            // // TODO: change the index.js to handle a tensor
-            // return { raw: 5.555555555, softmaxed: 5.555555555, label: urlString };
-
-            // Create a canvas element
-            const canvas = document.createElement('canvas');
-            canvas.width = outputTensor.shape[1]; // Width
-            canvas.height = outputTensor.shape[0]; // Height
-            const ctx = canvas.getContext('2d');
-
-            // Create an ImageData object and put it on the canvas
-            const imageData = ctx.createImageData(canvas.width, canvas.height);
-            for (let i = 0; i < uint8Array.length; i++) {
-                const pixelIndex = i * 4;
-                imageData.data[pixelIndex] = uint8Array[i]; // Red
-                imageData.data[pixelIndex + 1] = uint8Array[i]; // Green
-                imageData.data[pixelIndex + 2] = uint8Array[i]; // Blue
-                imageData.data[pixelIndex + 3] = 255; // Alpha (fully opaque)
-            }
-            ctx.putImageData(imageData, 0, 0);
-
-            // Convert the canvas to a Blob
-            return new Promise((resolve) => {
-                canvas.toBlob((outputBlob) => {
-                    // Generate a URL for the blob
-                    const url = URL.createObjectURL(outputBlob);
-
-                    // Convert the URL to a string
-                    const urlString = url.toString();
-
-                    // Return the result
-                    resolve({ raw: 5.555555555, softmaxed: 5.555555555, label: urlString });
-                }, 'image/png');
-            });
+    
+            // Extract the scalar output and determine the label
+            const score = outputData[0];
+            const label = score >= 3.8675 ? "Good" : "Suboptimal";
+    
+            return { score, label };
         }
     })
 ]

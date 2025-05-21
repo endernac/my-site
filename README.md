@@ -10,24 +10,21 @@ Example application using ONNX Runtime Web & Progressive Web Application (PWA) p
 3) Run the setup script: `npm run setup`
 4) Run tests to verify installation: `npm test`
 5) Run the local dev server: `netlify dev`
+6) (Hint) if you want to use webgpu, ensure that you are running a supported [browser](https://github.com/gpuweb/gpuweb/wiki/Implementation-Status)
 
 
-TODO:
-- [ ] Create a new function `naive_resize()` in utils.js to return a greyscale resized image w/o superresolution
-- [ ] modify index.js to create a side by side comparison of `naive_resize()` and the output of the superresolution model
+## Converting pytorch models to onnx files
+0) Please follow this [demo](https://docs.pytorch.org/tutorials/advanced/super_resolution_with_onnxruntime.html)
+1) Host you model on huggingface.
+2) Go the `public/models.js` and add a new model. Use the existing model as a template. You will need to write your own pre/post processing functions
+3) Write a new model test file based on for your new model `public/super_resolution-test.spec.js` to ensure your model is working correctly
+4) (Hint) if your model doesn't work, it's probably the pre and post processing functions double check those.
 
 
-## Usage (Original)
-0) **Prerequisite:** Convert a trained neural network to ONNX format. For details, see [ONNX Tutorials](https://github.com/onnx/tutorials?tab=readme-ov-file#converting-to-onnx-format).
-1) Clone this repository
-2) Create `ONNXModel` object and implement data pre-/post-processing functions in JavaScript as needed
-    - See [`models.js`](./models.js) for example(s)
-3) Modify output rendering UI (if applicable)
-    - Example application tabulates output, which works for image classification models. Other model types may require custom UI implementation. Please feel free to file issues and/or submit pull requests to contribute modular UI components to this repo!
-4) Deploy the customized static website via web hosting
-    - Many free services exist for static website hosting, e.g., GitHub Pages, Netlify, etc.
-    - Large files such as ONNX models may be served independently (e.g. using Cloudflare R2, AWS, HuggingFace, etc.) and linked via URL in [`models.js`](./models.js)
+## TODO
 
-
-## Contributions
-Issues and PRs are welcomed and encouraged!
+- [] Limit the number of files user can upload and check their types.
+- [x] Ensure that model is return tensors in models.js
+- [] Create a utility function that takes the output tensors, converts each one into an array, creates a zip folder using jszip (https://stuk.github.io/jszip/documentation/examples.html), adds each array file to the folder as an img file, zips the file, and lets the user download the file when a button in pushed, using Filesaver.js (https://github.com/eligrey/FileSaver.js/).
+- [] On the page, list run times and show a single download button at the bottom.
+- [] Write test suite

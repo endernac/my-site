@@ -106,7 +106,7 @@ document.querySelector('#runButton').addEventListener('click', async function() 
     // Table to display outputs
     const table = document.querySelector("#multiOutputContainer table");
     // Set up table header
-    const columns = ["filename", "Output", "inferenceTimeMs"];
+    const columns = ["filename", "Label", "Score", "inferenceTimeMs"];
     let thead = document.createElement("thead");
     thead.classList.add("table-light");
     thead.innerHTML = `<tr>${columns.map(col => `<th>${col}</th>`).join("")}</tr>`;
@@ -118,7 +118,8 @@ document.querySelector('#runButton').addEventListener('click', async function() 
     for (let idx = 0; idx < dropzone.files.length; idx++) {
         // Run model on input
         let file = dropzone.files[idx];
-        const rawInputTensor = await imageFileToTensor(file); // tensor will be in Tensorflow shape = (batch_size * H * W * C)
+        const rawInputTensor = await imgFileToTensor(file, [245, 1024, 245]);
+        
         const runData = await activeModel.run(rawInputTensor);
 
         // Update progress bar modal
@@ -133,7 +134,8 @@ document.querySelector('#runButton').addEventListener('click', async function() 
         let tr = tbody.insertRow();
         tr.innerHTML = `
             <td>${file.webkitRelativePath ? file.webkitRelativePath : file.name}</td>
-            <td><a href=${runData.output.label}>Image</a></td>
+            <td>${runData.output.label}</td>
+            <td>${runData.output.score.toFixed(2)}</td>
             <td>${runData.inferenceTimeMs.toFixed(0)}</td>
         `;
 

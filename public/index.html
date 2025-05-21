@@ -17,10 +17,10 @@
     <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.21.0/dist/ort.all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
 
-    <title>ONNX Demo for Super Resolution</title>
+    <title>3D OCTA classifier</title>
 </head>
 <body>
-    <h2>Demo Application<span id="offlineHeading"></span></h2>
+    <h2>3D OCTA Classifier<span id="offlineHeading"></span></h2>
     <select class="form-select form-select-lg mt-5" id="modelSelect" aria-label="Model Chooser">
         <option selected hidden>Select Model...</option>
     </select>
@@ -37,17 +37,6 @@
         <h3>Output Data</h3>
         <button type="button" class="btn btn-info mb-2" onclick="htmlTableToCSV(this.parentElement.querySelector('table'))">Download as CSV...</button>
         <table class="table table-bordered table-sm"></table>
-    </div>
-
-    <div id="imageComparisonContainer" class="container d-none">
-        <div class="image-card">
-            <img src="test.jpg" alt="Image 1" />
-            <div class="caption">Caption for Image 1</div>
-        </div>
-        <div class="image-card">
-            <img src="test.jpg" alt="Image 2" />
-            <div class="caption">Caption for Image 2</div>
-        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js"></script>
