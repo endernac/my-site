@@ -6,14 +6,10 @@
   "license": "ISC",
   "devDependencies": {
     "@tensorflow/tfjs-node": "^4.22.0",
-    "onnxruntime-web": "^1.21.0",
-    "playwright": "^1.52.0"
+    "onnxruntime-web": "^1.21.0"
   },
   "scripts": {
-    "test": "playwright test",
-    "setup": "npm install -g netlify-cli@v20.1.1 && npm install"
-  },
-  "dependencies": {
-    "@playwright/test": "^1.52.0"
+    "setup": "npm install -g netlify-cli@v20.1.1 && npm install",
+    "dev": "netlify dev"
   }
 }
