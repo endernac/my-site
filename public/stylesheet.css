@@ -116,7 +116,7 @@ body {
 
 main {
     overflow-y: auto;
-    height: calc(100vh - 100px); /*Subtract the combined height of the header and footer */
+    height: calc(100vh); /*Subtract the combined height of the header and footer */
     padding-top: 50px; /*Optional: Add some padding inside the scrollable area */
     padding-bottom: 50px;
     box-sizing: border-box; /* Include padding in the element's total width and height */
