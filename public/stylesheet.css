@@ -127,7 +127,7 @@ main {
     background-color: #f8f9fa; /* Light gray background */
     border-bottom: 1px solid #ddd; /* Subtle border */
     width: 100%; /* Full width */
-    height: 130px; /* height */
+    height: 10%; /* height */
     position: fixed; /* Stick to the top */
     top: 0; /* Align to the top of the page */
     left: 0;
@@ -140,7 +140,7 @@ main {
 }
 
 .custom-header h1 {
-    font-size: 3rem; /* Double the size */
+    font-size: clamp(1.5rem, 5vw, 3rem); /* Double the size */
     margin: 0;
     color: #333; /* Dark text */
     text-align: center;
@@ -148,9 +148,11 @@ main {
 }
 
 .header-logo {
-    width: 200px; /* Double the size */
-    height: 200px;
-    object-fit: cover; /* Ensure square aspect ratio */
+    height: 100px; 
+    /* width: auto;  */
+    aspect-ratio: 1 / 1; 
+    object-fit: contain; 
+    display: flex; 
 }
 
 .custom-footer {
