@@ -101,11 +101,13 @@ main {
 }
 
 .custom-header h1 {
-    font-size: clamp(1.5rem, 5vw, 3rem); /* Double the size */
+    font-size: clamp(1rem, 4vh, 2rem); /* Scale font size based on viewport height */
     margin: 0;
     color: #333; /* Dark text */
     text-align: center;
     flex-grow: 1; /* Center the text */
+    max-height: 100%; /* Ensure the text stays within the header */
+    overflow: hidden; /* Prevent text from spilling out */
 }
 
 .header-logo {
