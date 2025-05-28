@@ -22,7 +22,9 @@ body {
 }
 
 #multiOutputContainer {
-    min-width: 40%;
+    width: 70%; /* Set the width to 70% */
+    margin: 0 auto; /* Center the container horizontally */
+    text-align: center; /* Center the content inside */
 }
 
 #inputDropzone {
