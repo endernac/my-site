@@ -138,7 +138,6 @@ document.addEventListener("DOMContentLoaded", async function () {
             // Disable by default, until a model is selected
             this.disable();
             this.element.classList.add("disabled");
-            this.element.style.width = "600px"; // This would override CSS
         }
     });
 

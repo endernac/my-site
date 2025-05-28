@@ -32,7 +32,7 @@ body {
     background: #e6e6e6;
     justify-content: center;
     width: 100%;
-    max-width: 100%;
+    max-width: 70%;
     max-height: 300px;
     overflow-y: scroll;
 }
@@ -75,45 +75,6 @@ body {
     text-align: left;
 }
 
-/* Styles for the container and image-card */
-.container {
-    display: flex;
-    gap: 20px;
-    padding: 20px;
-    background-color: white;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    justify-content: center;
-    align-items: center;
-    margin-top: 20px;
-}
-
-.image-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    overflow: hidden;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    transition: transform 0.3s ease;
-    background-color: #fff;
-    max-width: 300px;
-}
-
-.image-card img {
-    width: 100%;
-    height: auto;
-    border-top-left-radius: 12px;
-    border-top-right-radius: 12px;
-}
-
-.caption {
-    padding: 12px;
-    font-size: 1rem;
-    color: #555;
-    text-align: center;
-}
-
 main {
     overflow-y: auto;
     height: calc(100vh); /*Subtract the combined height of the header and footer */
@@ -149,7 +110,7 @@ main {
 
 .header-logo {
     height: 100px; 
-    /* width: auto;  */
+    /* width: 10%;  */
     aspect-ratio: 1 / 1; 
     object-fit: contain; 
     display: flex; 
@@ -203,12 +164,3 @@ main {
 .references ol {
     padding-left: 20px; /* Add padding for ordered list */
 }
-
-/* .scroller {
-    height: 100%;
-    width: 100%;
-
-    padding-bottom: 130px;
-    padding-top: 50px;
-    box-sizing: border-box;
-} */
