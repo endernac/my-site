@@ -49,9 +49,11 @@ class ONNXModel {
     async run(rawInputs) {
         const preprocessStart = performance.now();
         const ortInputs = await this.preprocess(rawInputs);
+        console.log('Running inference');
         const preprocessEnd = performance.now();
         const ortOutputs = await this.ortSession.run(ortInputs);
         const inferenceEnd = performance.now();
+        console.log('Postprocessing');
         const processedOutputs = await this.postprocess(ortOutputs);
         const postprocessEnd = performance.now();
         return {

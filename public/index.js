@@ -1,87 +1,5 @@
-var activeModel = null;
-const modelSelect = document.querySelector('#modelSelect');
-async function updateModelSelect() {
-    for (var idx = 0; idx < MODELS.length; idx++) {
-        // don't access .options directly with index since we may have placeholders, headings, etc.
-        const option = modelSelect.querySelector(`option[value="${idx}"]`);
-        let model = MODELS[idx];
-        if (await modelIsCached(model)) {
-            option.textContent = model.name + " (Cached)"; // show this even if online so user knows which need caching
-        } else {
-            if (navigator.onLine) {
-                option.textContent = model.name;
-                option.disabled = false;
-            } else {
-                option.textContent = model.name + " (Unavailable)";
-                option.disabled = true;
-            }
-        }
-    };
-}
-modelSelect.addEventListener('change', async function(e) {
-    // if (activeModel && activeModel.ortSession) {
-    //     activeModel.ortSession.release();
-    // }
-    activeModel = MODELS[e.target.value];
-
-    const modalElement = makeModalElement(`
-        <div class="modal-body">
-            <h4>Loading ${activeModel.name} Model...</h4>
-            <div class="progress" style="height: 30px;">
-                <div id="modelDownloadProgress" class="progress-bar bg-success" role="progressbar" style="width: 0%;"></div>
-            </div>
-        </div>
-    `);
-    modalElement.tabIndex = -1;
-    modalElement.setAttribute('aria-hidden', 'true');
-    modalElement.setAttribute('data-bs-backdrop', 'static');
-    modalElement.setAttribute('data-bs-keyboard', 'false');
-    const bsModal = new bootstrap.Modal(modalElement);
-    bsModal.show();
-
-    let progressBar = document.querySelector("#modelDownloadProgress");
-    try {
-        await activeModel.load((progressFraction) => {
-            const percent = Math.round(progressFraction * 100);
-            progressBar.style.width = `${percent}%`;
-            progressBar.innerText = `${percent}%`;
-        });
-    } catch {
-        activeModel = null;
-        return;
-    } finally {
-        forceHideBSModal(bsModal);
-    }
-
-    // Enable input
-    dropzone.element.classList.remove("disabled");
-    dropzone.element.querySelector('.dz-message').textContent =  "Drag & drop, or click to browse...";
-    dropzone.enable();
-
-    // Clear outputs
-    clearOutputs();
-
-    // Update to show the user that the model is now cached
-    updateModelSelect();
-});
-
-document.querySelector('#clearCacheButton').addEventListener('click', async function() {
-    await clearCaches();
-
-    // Unregister service worker
-    if ('serviceWorker' in navigator) {
-        await navigator.serviceWorker.getRegistration().then(async function(registration) {
-            if (registration) {
-                await registration.unregister();
-                console.log("Unregistered service worker");
-            } else {
-                console.log("No service worker to unregister.");
-            }
-        });
-    }
-
-    window.location.reload();
-});
+let activeModel = null;
+let dropzone = null;
 
 document.querySelector('#runButton').addEventListener('click', async function() {
     clearOutputs();
@@ -120,7 +38,8 @@ document.querySelector('#runButton').addEventListener('click', async function() 
         let file = dropzone.files[idx];
         const rawInputTensor = await imgFileToTensor(file, [245, 1024, 245]);
         
-        const runData = await activeModel.run(rawInputTensor);
+        const runData = await activeModel.run(rawInputTensor);        
+        rawInputTensor.dispose(); // Dispose of rawInputTensor to free memory
 
         // Update progress bar modal
         const percent = Math.round(((idx+1) / dropzone.files.length) * 100);
@@ -129,7 +48,7 @@ document.querySelector('#runButton').addEventListener('click', async function() 
             progressBar.innerText = `${percent}%`;
         }
         modalHeader.innerText = ` (${idx+1}/${dropzone.files.length})`;
-
+        
         // Add row to table
         let tr = tbody.insertRow();
         tr.innerHTML = `
@@ -140,8 +59,12 @@ document.querySelector('#runButton').addEventListener('click', async function() 
         `;
 
         // Conditional styling, poor quality is highlighted as red
-        if (runData.output.label.toUpperCase() === "POOR") {
+        if (runData.output.label.toUpperCase() === "SUBOPTIMAL") {
             tr.classList.add("table-danger");
+        } 
+
+        if (runData.output.label.toUpperCase() === "EXCELLENT/GOOD") {
+            tr.classList.add("table-success");
         }
     }
 
@@ -150,26 +73,42 @@ document.querySelector('#runButton').addEventListener('click', async function() 
 
     // Display table
     document.querySelector("#multiOutputContainer").classList.remove("d-none");
-
-    // Display image comparison container
-    // document.querySelector("#imageComparisonContainer").classList.remove("d-none");
 });
 
-function clearOutputs() {
-    document.querySelector('#multiOutputContainer').classList.add("d-none");
-    document.querySelector('#multiOutputContainer table').innerHTML = "";
+async function updateModelSelect() {
+    for (var idx = 0; idx < MODELS.length; idx++) {
+        // don't access .options directly with index since we may have placeholders, headings, etc.
+        const option = modelSelect.querySelector(`option[value="${idx}"]`);
+        let model = MODELS[idx];
+        if (await modelIsCached(model)) {
+            option.textContent = model.name + " (Cached)"; // show this even if online so user knows which need caching
+        } else {
+            if (navigator.onLine) {
+                option.textContent = model.name;
+                option.disabled = false;
+            } else {
+                option.textContent = model.name + " (Unavailable)";
+                option.disabled = true;
+            }
+        }
+    };
 }
 
-var dropzone = null;
-document.addEventListener("DOMContentLoaded", async function() {
-    for (var idx = 0; idx < MODELS.length; idx++) {
-        const model = MODELS[idx];
-        let option = document.createElement('option');
-        option.value = idx;
-        option.textContent = model.name;
-        modelSelect.appendChild(option);
-    };
+// --------- PWA Config ---------- //
 
+// Register PWA Service Worker
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./service-worker.js');
+}
+
+window.addEventListener('online', goOnline);
+window.addEventListener('offline', goOffline);
+
+
+/* Use this if you don't want to use the model select functionality */
+/* ******************************************************/
+document.addEventListener("DOMContentLoaded", async function () {
+    // // Initialize Dropzone
     dropzone = new Dropzone("#inputDropzone", {
         url: "javascript:void(0);", // No actual upload, just processing files
         autoProcessQueue: false, // Prevent Dropzone from uploading files
@@ -191,9 +130,6 @@ document.addEventListener("DOMContentLoaded", async function() {
             });
             this.on("thumbnail", async function (file, dataUrl) {
                 const previewImg = file.previewElement.querySelector(".dz-image img");
-                if (file.type === "image/tiff") {
-                    previewImg.src = await tiffFileToDataURL(file); // convert TIFF to PNG
-                }
 
                 // Free dataURL string; we will just keep the raw buffer
                 delete file.dataURL;
@@ -202,28 +138,209 @@ document.addEventListener("DOMContentLoaded", async function() {
             // Disable by default, until a model is selected
             this.disable();
             this.element.classList.add("disabled");
+            this.element.style.width = "600px"; // This would override CSS
         }
     });
+
+    // Automatically load the default model
+    const defaultModelName = 'OCTAGAN';
+    const defaultModel = MODELS.find(model => model.name === defaultModelName);
+
+    if (defaultModel) {
+        activeModel = defaultModel;
+
+        const modalElement = makeModalElement(`
+            <div class="modal-body">
+                <h4>Loading ${activeModel.name} Model...</h4>
+                <div class="progress" style="height: 30px">
+                    <div id="modelDownloadProgress" class="progress-bar bg-success" role="progressbar" style="width: 0%;">0%</div>
+                </div>
+            </div>
+        `);
+        modalElement.tabIndex = -1;
+        modalElement.setAttribute('aria-hidden', 'true');
+        modalElement.setAttribute('data-bs-backdrop', 'static');
+        modalElement.setAttribute('data-bs-keyboard', 'false');
+        const bsModal = new bootstrap.Modal(modalElement);
+        bsModal.show();
+
+        const progressBar = modalElement.querySelector("#modelDownloadProgress");
+        try {
+            await activeModel.load((progressFraction) => {
+                const percent = Math.round(progressFraction * 100);
+                progressBar.style.width = `${percent}%`;
+                progressBar.innerText = `${percent}%`;
+            });
+        } catch (error) {
+            console.error("Failed to load the model:", error);
+            activeModel = null;
+        } finally {
+            forceHideBSModal(bsModal);
+        }
+
+        // Enable dropzone
+        dropzone.element.classList.remove("disabled");
+        dropzone.element.querySelector('.dz-message').textContent =  "Drag & drop, or click to browse...";
+        dropzone.enable();
+
+    } else {
+        console.error(`Default model "${defaultModelName}" not found.`);
+    }
 
     // Determine whether we're online
     navigator.onLine ? goOnline() : goOffline();
 });
 
-// --------- PWA Config ---------- //
-
-// Register PWA Service Worker
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js');
+// Clear outputs
+function clearOutputs() {
+    const outputContainer = document.querySelector('#multiOutputContainer');
+    outputContainer.classList.add("d-none");
+    outputContainer.querySelector('table').innerHTML = "";
 }
+
 async function goOnline() {
     console.log('App is online.');
     document.querySelector('#offlineHeading').innerText = "";
-    updateModelSelect();
 }
+
 async function goOffline() {
     console.log('App is offline.');
     document.querySelector('#offlineHeading').innerText = " (Offline)";
-    updateModelSelect();
 }
-window.addEventListener('online', goOnline);
-window.addEventListener('offline', goOffline);
+/****************************************************** */
+
+
+/* Use this if you want to use the model select functionality */
+/* ******************************************************/
+
+// const modelSelect = document.querySelector('#modelSelect');
+
+// modelSelect.addEventListener('change', async function(e) {
+//     activeModel = MODELS[e.target.value];
+
+//     const modalElement = makeModalElement(`
+//         <div class="modal-body">
+//             <h4>Loading ${activeModel.name} Model...</h4>
+//             <div class="progress" style="height: 30px;">
+//                 <div id="modelDownloadProgress" class="progress-bar bg-success" role="progressbar" style="width: 0%;"></div>
+//             </div>
+//         </div>
+//     `);
+//     modalElement.tabIndex = -1;
+//     modalElement.setAttribute('aria-hidden', 'true');
+//     modalElement.setAttribute('data-bs-backdrop', 'static');
+//     modalElement.setAttribute('data-bs-keyboard', 'false');
+//     const bsModal = new bootstrap.Modal(modalElement);
+//     bsModal.show();
+
+//     let progressBar = document.querySelector("#modelDownloadProgress");
+//     try {
+//         await activeModel.load((progressFraction) => {
+//             const percent = Math.round(progressFraction * 100);
+//             progressBar.style.width = `${percent}%`;
+//             progressBar.innerText = `${percent}%`;
+//         });
+//     } catch {
+//         activeModel = null;
+//         return;
+//     } finally {
+//         forceHideBSModal(bsModal);
+//     }
+
+//     // Enable dropzone
+//     dropzone.enable();
+//     dropzone.element.classList.remove("disabled");
+//     dropzone.element.querySelector('.dz-message').textContent =  "Drag & drop, or click to browse...";
+//     dropzone.element.style.width = "600px"; // This would override CSS
+
+//     // Clear outputs
+//     clearOutputs();
+
+//     // Update to show the user that the model is now cached
+//     updateModelSelect();
+// });
+
+// document.addEventListener("DOMContentLoaded", async function() {
+//     for (var idx = 0; idx < MODELS.length; idx++) {
+//         const model = MODELS[idx];
+//         let option = document.createElement('option');
+//         option.value = idx;
+//         option.textContent = model.name;
+//         modelSelect.appendChild(option);
+//     };
+
+//     dropzone = new Dropzone("#inputDropzone", {
+//         url: "javascript:void(0);", // No actual upload, just processing files
+//         autoProcessQueue: false, // Prevent Dropzone from uploading files
+//         addRemoveLinks: true,
+//         dictRemoveFile: "Remove",
+//         paramName: "file",
+//         dictDefaultMessage: "Please select an image type above",
+//         init: function() {
+//             this.on("addedfile", async function(event) {
+//                 document.querySelectorAll("#modelButtonContainer button").forEach((element) => {
+//                     element.classList.remove("disabled");
+//                 });
+//             });
+//             this.on("reset", async function(event) {
+//                 document.querySelectorAll("#modelButtonContainer button").forEach((element) => {
+//                     element.classList.add("disabled");
+//                 });
+//                 clearOutputs();
+//             });
+//             this.on("thumbnail", async function (file, dataUrl) {
+//                 const previewImg = file.previewElement.querySelector(".dz-image img");
+//                 if (file.type === "image/tiff") {
+//                     previewImg.src = await tiffFileToDataURL(file); // convert TIFF to PNG
+//                 }
+
+//                 // Free dataURL string; we will just keep the raw buffer
+//                 delete file.dataURL;
+//             });
+
+//             // Disable by default, until a model is selected
+//             this.disable();
+//             this.element.classList.add("disabled");
+//         }
+//     });
+
+//     // Determine whether we're online
+//     navigator.onLine ? goOnline() : goOffline();
+// });
+
+// document.querySelector('#clearCacheButton').addEventListener('click', async function() {
+//     await clearCaches();
+
+//     // Unregister service worker
+//     if ('serviceWorker' in navigator) {
+//         await navigator.serviceWorker.getRegistration().then(async function(registration) {
+//             if (registration) {
+//                 await registration.unregister();
+//                 console.log("Unregistered service worker");
+//             } else {
+//                 console.log("No service worker to unregister.");
+//             }
+//         });
+//     }
+
+//     window.location.reload();
+// });
+
+// function clearOutputs() {
+//     document.querySelector('#multiOutputContainer').classList.add("d-none");
+//     document.querySelector('#multiOutputContainer table').innerHTML = "";
+// }
+
+// async function goOnline() {
+//     console.log('App is online.');
+//     document.querySelector('#offlineHeading').innerText = "";
+//     updateModelSelect();
+// }
+
+// async function goOffline() {
+//     console.log('App is offline.');
+//     document.querySelector('#offlineHeading').innerText = " (Offline)";
+//     updateModelSelect();
+// }
+
+/****************************************************** */

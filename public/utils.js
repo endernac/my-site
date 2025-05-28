@@ -312,24 +312,22 @@ function makeModalElement(modalContentHTML) {
  * @returns {tensor} Normalized tensor
  */
 const normalize = (vol, lowerPercentile, upperPercentile) => {
-    // check that the tensor is of int32 type
-    if (vol.dtype !== 'int32') {
-        throw new Error("Tensor must be of dtype 'int32'");
-    }
-    // check that the tensor is 3D
-    if (vol.rank !== 3) {
-        throw new Error("Input tensor must be 3D");
-    }
+    return tf.tidy(() => {
+        if (vol.dtype !== 'int32') {
+            throw new Error("Tensor must be of dtype 'int32'");
+        }
+        if (vol.rank !== 3) {
+            throw new Error("Input tensor must be 3D");
+        }
 
-    // create a volume normalized to the range [-1, 1]
-    const normalized = vol.clipByValue(lowerPercentile, upperPercentile)
-        .sub(lowerPercentile)
-        .div(upperPercentile - lowerPercentile)
-        .mul(2)
-        .sub(1);
-    
-    // convert tensor to float32 and return
-    return normalized.cast('float32');
+        const normalized = vol.clipByValue(lowerPercentile, upperPercentile)
+            .sub(lowerPercentile)
+            .div(upperPercentile - lowerPercentile)
+            .mul(2)
+            .sub(1);
+
+        return normalized.cast('float32');
+    });
 };
 
 /**
@@ -338,25 +336,27 @@ const normalize = (vol, lowerPercentile, upperPercentile) => {
  * @returns {tensor} Normalized tensor
  */
 const normalize2 = (vol) => {
-    // check that the tensor is of float32 type
-    if (vol.dtype !== 'float32') {
-        throw new Error("Tensor must be of dtype 'float32'");
-    }
-    // check that the tensor is 3D
-    if (vol.rank !== 3) {
-        throw new Error("Input tensor must be 3D");
-    }
+    return tf.tidy(() => {
+        // check that the tensor is of float32 type
+        if (vol.dtype !== 'float32') {
+            throw new Error("Tensor must be of dtype 'float32'");
+        }
+        // check that the tensor is 3D
+        if (vol.rank !== 3) {
+            throw new Error("Input tensor must be 3D");
+        }
 
-    const flatten = vol.flatten();
-    const sorted = flatten.arraySync().sort((a, b) => a - b);
-    const lowerPercentile = sorted[Math.floor(0.005 * sorted.length)];
-    const upperPercentile = sorted[Math.floor(0.995 * sorted.length)];
+        const flatten = vol.flatten();
+        const sorted = flatten.arraySync().sort((a, b) => a - b);
+        const lowerPercentile = sorted[Math.floor(0.005 * sorted.length)];
+        const upperPercentile = sorted[Math.floor(0.995 * sorted.length)];
 
-    return vol.clipByValue(lowerPercentile, upperPercentile)
-        .sub(lowerPercentile)
-        .div(upperPercentile - lowerPercentile)
-        .mul(2)
-        .sub(1);
+        return vol.clipByValue(lowerPercentile, upperPercentile)
+            .sub(lowerPercentile)
+            .div(upperPercentile - lowerPercentile)
+            .mul(2)
+            .sub(1);
+    });
 };
 
 // /**
@@ -441,7 +441,7 @@ const normalize2 = (vol) => {
  * @param {number} pHigh       - Upper percentile (e.g. 0.995).
  * @returns {{ low: number, high: number }} - Percentile gray-levels.
  */
-function computeUint8PercentilesTensor(vol, pLow = 0.005, pHigh = 0.995) {
+function computeUintPercentilesTensor(vol, pLow = 0.005, pHigh = 0.995) {
     // check that the tensor is of int32 type
     if (vol.dtype !== 'int32') {
         throw new Error("Tensor must be of dtype 'int32'");
@@ -504,23 +504,29 @@ const crop_volume = async (vol, tol = 0.75) => {
         throw new Error("Input tensor must be 3D");
     }
 
-    // get the mask of voxel above the threshold
-    const mask = vol.greater(tf.scalar(tol));
+    // Get the mask of voxels above the threshold
+    const mask = tf.tidy(() => vol.greater(tf.scalar(tol)));
 
-    // get the coordinates of the non-zero elements using tensorflow.js
+    // Get the coordinates of the non-zero elements (asynchronous operation)
     const coords = await tf.whereAsync(mask);
 
+    // Dispose of the mask tensor after use
+    mask.dispose();
+
     if (coords.size === 0) {
+        coords.dispose();
         throw new Error('No valid region found in the tensor for cropping.');
     }
 
-    // get x, y, z dimensions
-    const [x_max, y_max, z_max] = vol.shape; 
-    const [x0, y0, z0] = coords.min(0).arraySync();
-    const [x1, y1, z1] = coords.max(0).arraySync().map((v) => v + 1);
+    // Get min and max coordinates for cropping
+    const y0 = tf.tidy(() => coords.min(0).arraySync()[1]);
+    const y1 = tf.tidy(() => coords.max(0).arraySync()[1] + 1);
 
-    // fix to make syntax correct
-    return vol.slice([x0, y0, z0], [x1 - x0, y1 - y0, z1 - z0]); 
+    // Dispose of the coords tensor after use
+    coords.dispose();
+
+    // Return the cropped volume
+    return tf.tidy(() => vol.slice([0, y0, 0], [-1, y1 - y0, -1]));
 };
 
 /**

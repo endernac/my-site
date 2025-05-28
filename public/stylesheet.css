@@ -4,13 +4,21 @@ body {
     justify-content: center;
     text-align: center;
     align-items: center;
-    row-gap: 0.5em;
+    row-gap: 0.25em; 
     min-height: 100dvh;
+    margin: 0; 
+    padding: 0; 
 }
 
 #modelSelect, #imageInputWrapper {
-    width: 80%;
+    width: 100%;
+    margin-top: 0px;
     max-width: 600px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }
 
 #multiOutputContainer {
@@ -18,12 +26,14 @@ body {
 }
 
 #inputDropzone {
+    margin-top: 50px;
     border-radius: 1em;
     border: 0.2em black dashed;
     background: #e6e6e6;
     justify-content: center;
-    max-width: 80%;
-    max-height: 500px;
+    width: 100%;
+    max-width: 100%;
+    max-height: 300px;
     overflow-y: scroll;
 }
 
@@ -54,6 +64,7 @@ body {
 
 #inputDropzone .dz-image {
     display: flex;
+    width: 20%;
 }
 
 #modelButtonContainer {
@@ -102,3 +113,100 @@ body {
     color: #555;
     text-align: center;
 }
+
+main {
+    overflow-y: auto;
+    height: calc(100vh - 100px); /*Subtract the combined height of the header and footer */
+    padding-top: 50px; /*Optional: Add some padding inside the scrollable area */
+    padding-bottom: 50px;
+    box-sizing: border-box; /* Include padding in the element's total width and height */
+
+}
+
+.custom-header {
+    background-color: #f8f9fa; /* Light gray background */
+    border-bottom: 1px solid #ddd; /* Subtle border */
+    width: 100%; /* Full width */
+    height: 130px; /* height */
+    position: fixed; /* Stick to the top */
+    top: 0; /* Align to the top of the page */
+    left: 0;
+    z-index: 1000; /* Ensure it stays above other elements */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px; /* Add some padding */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+}
+
+.custom-header h1 {
+    font-size: 3rem; /* Double the size */
+    margin: 0;
+    color: #333; /* Dark text */
+    text-align: center;
+    flex-grow: 1; /* Center the text */
+}
+
+.header-logo {
+    width: 200px; /* Double the size */
+    height: 200px;
+    object-fit: cover; /* Ensure square aspect ratio */
+}
+
+.custom-footer {
+    background-color: #f8f9fa; /* Light gray background */
+    width: 100%; /* Full width */
+    height: 50px; /* Height of the footer */
+    position: fixed; /* Stick to the bottom */
+    bottom: 0; /* Align to the bottom of the page */
+    left: 0;
+    z-index: 1000; /* Ensure it stays above other elements */
+    text-align: center; /* Center the text */
+    font-size: 0.9rem; /* Relatively small text */
+    color: #555; /* Subtle text color */
+    border-top: 1px solid #ddd; /* Subtle border */
+    padding: 15px 15px; 
+}
+
+.custom-footer a {
+    color: #007bff; /* Bootstrap blue for links */
+    text-decoration: none; /* Remove underline */
+}
+
+.custom-footer a:hover {
+    text-decoration: underline; /* Underline on hover */
+}
+
+.info-text {
+    width: 70%; /* Slightly wider than the middle third */
+    padding-top: 50px;
+    margin: 20px auto; /* Center horizontally and add spacing */
+    font-size: 1.2rem; /* Medium-sized text */
+    color: #333; /* Dark text for readability */
+    line-height: 1.6; /* Improve readability */
+    text-align: left; /* Align text to the left */
+}
+
+.references {
+    width: 70%; /* Slightly wider than the middle third */
+    margin: 20px auto; /* Center horizontally and add spacing */
+    font-size: 1rem; /* Medium-sized text */
+    color: #333; /* Dark text for readability */
+    line-height: 1.6; /* Improve readability */
+    text-align: left; /* Align text to the left */
+}
+.references p {
+    font-weight: bold; /* Bold the "References" heading */
+}
+.references ol {
+    padding-left: 20px; /* Add padding for ordered list */
+}
+
+/* .scroller {
+    height: 100%;
+    width: 100%;
+
+    padding-bottom: 130px;
+    padding-top: 50px;
+    box-sizing: border-box;
+} */
